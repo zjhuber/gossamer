@@ -182,7 +182,7 @@ func (l *ExtrinsicSubmitListener) Listen() {
 		for info := range l.finalisedChan {
 			if reflect.DeepEqual(l.importedHash, info.Header.Hash()) {
 				resM := make(map[string]interface{})
-				resM["finalised"] = info.Header.Hash().String()
+				resM["finalized"] = info.Header.Hash().String()
 				l.wsconn.safeSend(newSubscriptionResponse(AuthorExtrinsicUpdates, l.subID, resM))
 			}
 		}
