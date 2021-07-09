@@ -356,7 +356,7 @@ func (p *FullNode) getLastPrunedIndex() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	var blockNum int64
 	err = scale.Unmarshal(val, &blockNum)
 	if err != nil {
