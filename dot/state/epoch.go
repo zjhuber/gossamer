@@ -287,7 +287,7 @@ func (s *EpochState) GetConfigData(epoch uint64) (*types.ConfigData, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var info *types.ConfigData
 	err = scale.Unmarshal(enc, &info)
 	if err != nil {
