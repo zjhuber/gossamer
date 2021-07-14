@@ -25,7 +25,6 @@ import (
 
 	"github.com/ChainSafe/gossamer/lib/common"
 	"github.com/ChainSafe/gossamer/lib/scale"
-	scale2 "github.com/ChainSafe/gossamer/pkg/scale"
 )
 
 const none = "None"
@@ -134,7 +133,7 @@ func (x *Bytes) Encode() ([]byte, error) {
 		return []byte{0}, nil
 	}
 
-	value, err := scale2.Marshal(x.value)
+	value, err := scale.Encode(x.value)
 	if err != nil {
 		return nil, err
 	}
@@ -176,13 +175,11 @@ func (x *Bytes) DecodeBytes(data []byte) (*Bytes, error) {
 	x.exists = data[0] != 0
 
 	if x.exists {
-		var decData []byte
-		err := scale2.Unmarshal(data[1:], &decData)
-		//decData, err := scale.Decode(data[1:], []byte{})
+		decData, err := scale.Decode(data[1:], []byte{})
 		if err != nil {
 			return nil, err
 		}
-		x.value = decData
+		x.value = decData.([]byte)
 	} else {
 		x.value = nil
 	}

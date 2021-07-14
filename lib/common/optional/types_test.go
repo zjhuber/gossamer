@@ -18,7 +18,6 @@ package optional
 
 import (
 	"bytes"
-	"github.com/ChainSafe/gossamer/pkg/scale"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -188,14 +187,11 @@ func TestDecodeBytes(t *testing.T) {
 	require.True(t, testBytes.Exists(), "exist should be true")
 	require.Equal(t, testByteData, testBytes.Value(), "value should be Equal")
 
-	//encData, err := testBytes.Encode()
-	encData, err := scale.Marshal(testBytes)
+	encData, err := testBytes.Encode()
 	require.NoError(t, err)
 	require.NotNil(t, encData)
 
-	//newBytes, err := testBytes.DecodeBytes(encData)
-	var newBytes *Bytes
-	err = scale.Unmarshal(encData, &newBytes)
+	newBytes, err := testBytes.DecodeBytes(encData)
 	require.NoError(t, err)
 
 	require.True(t, newBytes.Exists(), "exist should be true")
