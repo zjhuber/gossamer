@@ -17,11 +17,13 @@
 package wasmtime
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/ChainSafe/gossamer/lib/runtime"
 )
 
 func Test_NewTestInstance(t *testing.T) {
-	NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
+	inst := NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
+	require.NotNil(t, inst)
 }
