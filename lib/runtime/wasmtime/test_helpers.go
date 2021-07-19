@@ -72,6 +72,8 @@ func GetRuntimeImports(t *testing.T, targetRuntime string) ImportsFunc {
 	switch targetRuntime {
 	case runtime.NODE_RUNTIME:
 		imports = ImportNodeRuntime
+	case runtime.HOST_API_TEST_RUNTIME:
+		imports = ImportNodeRuntime
 	default:
 		t.Fatalf("unknown runtime type %s", targetRuntime)
 	}

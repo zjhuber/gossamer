@@ -16,9 +16,9 @@
 
 package wasmtime
 
+import "C"
 import (
 	"fmt"
-
 	"github.com/bytecodealliance/wasmtime-go"
 )
 
@@ -75,6 +75,16 @@ func ext_crypto_ed25519_generate_version_1(c *wasmtime.Caller, a int32, z int64)
 	return 0
 }
 
+func ext_crypto_ed25519_public_keys_version_1(c *wasmtime.Caller, a int32) int64 {
+	logger.Trace("[ext_crypto_ed25519_public_keys_version_1] executing...")
+	return 0
+}
+
+func ext_crypto_ed25519_sign_version_1(c *wasmtime.Caller, a, b int32, z int64) int64 {
+	logger.Trace("[ext_crypto_ed25519_sign_version_1] executing...")
+	return 0
+}
+
 func ext_crypto_ed25519_verify_version_1(c *wasmtime.Caller, a int32, z int64, y int32) int32 {
 	logger.Trace("[ext_crypto_ed25519_verify_version_1] executing...")
 	return 0
@@ -90,6 +100,11 @@ func ext_crypto_secp256k1_ecdsa_recover_compressed_version_1(c *wasmtime.Caller,
 	return 0
 }
 
+func ext_crypto_secp256k1_ecdsa_recover_version_1(c *wasmtime.Caller, a, b int32) int64 {
+	logger.Trace("[ext_crypto_secp256k1_ecdsa_recover_version_1] executing...")
+	return 0
+}
+
 func ext_crypto_sr25519_generate_version_1(c *wasmtime.Caller, a int32, z int64) int32 {
 	logger.Trace("[ext_crypto_sr25519_generate_version_1] executing...")
 	return 0
@@ -102,6 +117,11 @@ func ext_crypto_sr25519_public_keys_version_1(c *wasmtime.Caller, a int32) int64
 
 func ext_crypto_sr25519_sign_version_1(c *wasmtime.Caller, a, z int32, y int64) int64 {
 	logger.Trace("[ext_crypto_sr25519_sign_version_1] executing...")
+	return 0
+}
+
+func ext_crypto_sr25519_verify_version_1(c *wasmtime.Caller, a int32, z int64, y int32) int32 {
+	logger.Trace("[ext_crypto_sr25519_verify_version_1] executing...")
 	return 0
 }
 
@@ -144,8 +164,22 @@ func ext_default_child_storage_clear_version_1(c *wasmtime.Caller, a, b int64) {
 	logger.Trace("[ext_default_child_storage_clear_version_1] executing...")
 }
 
+func ext_default_child_storage_clear_prefix_version_1(c *wasmtime.Caller, a, b int64) {
+	logger.Trace("[ext_default_child_storage_clear_prefix_version_1] executing...")
+}
+
+func ext_default_child_storage_exists_version_1(c *wasmtime.Caller, a, b int64) int32 {
+	logger.Trace("[ext_default_child_storage_exists_version_1] executing...")
+	return 0
+}
+
 func ext_default_child_storage_get_version_1(c *wasmtime.Caller, a, b int64) int64 {
 	logger.Trace("[ext_default_child_storage_get_version_1] executing...")
+	return 0
+}
+
+func ext_default_child_storage_next_key_version_1(c *wasmtime.Caller, a, b int64) int64 {
+	logger.Trace("[ext_default_child_storage_next_key_version_1] executing...")
 	return 0
 }
 
@@ -216,6 +250,11 @@ func ext_hashing_twox_128_version_1(c *wasmtime.Caller, z int64) int32 {
 
 func ext_hashing_twox_64_version_1(c *wasmtime.Caller, z int64) int32 {
 	logger.Trace("[ext_hashing_twox_64_version_1] executing...")
+	return 0
+}
+
+func ext_hashing_twox_256_version_1(c *wasmtime.Caller, z int64) int32 {
+	logger.Trace("[ext_hashing_twox_256_version_1] executing...")
 	return 0
 }
 
@@ -311,6 +350,11 @@ func ext_storage_start_transaction_version_1(c *wasmtime.Caller) {
 	logger.Trace("[ext_storage_start_transaction_version_1] executing...")
 }
 
+func ext_trie_blake2_256_root_version_1(c *wasmtime.Caller, a int64) int32 {
+	logger.Trace("[ext_trie_blake2_256_root_version_1] executing...")
+	return 0
+}
+
 func ext_offchain_index_set_version_1(c *wasmtime.Caller, a, b int64) {
 	logger.Trace("[ext_offchain_index_set_version_1] executing...")
 }
@@ -330,12 +374,16 @@ func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtim
 		{"ext_sandbox_memory_set_version_1", ext_sandbox_memory_set_version_1},
 		{"ext_sandbox_memory_teardown_version_1", ext_sandbox_memory_teardown_version_1},
 		{"ext_crypto_ed25519_generate_version_1", ext_crypto_ed25519_generate_version_1},
+		{"ext_crypto_ed25519_public_keys_version_1", ext_crypto_ed25519_public_keys_version_1},
+		{"ext_crypto_ed25519_sign_version_1", ext_crypto_ed25519_sign_version_1},
 		{"ext_crypto_ed25519_verify_version_1", ext_crypto_ed25519_verify_version_1},
 		{"ext_crypto_finish_batch_verify_version_1", ext_crypto_finish_batch_verify_version_1},
 		{"ext_crypto_secp256k1_ecdsa_recover_compressed_version_1", ext_crypto_secp256k1_ecdsa_recover_compressed_version_1},
+		{"ext_crypto_secp256k1_ecdsa_recover_version_1", ext_crypto_secp256k1_ecdsa_recover_version_1},
 		{"ext_crypto_sr25519_public_keys_version_1", ext_crypto_sr25519_public_keys_version_1},
 		{"ext_offchain_local_storage_set_version_1", ext_offchain_local_storage_set_version_1},
 		{"ext_crypto_sr25519_sign_version_1", ext_crypto_sr25519_sign_version_1},
+		{"ext_crypto_sr25519_verify_version_1", ext_crypto_sr25519_verify_version_1},
 		{"ext_crypto_sr25519_verify_version_2", ext_crypto_sr25519_verify_version_2},
 		{"ext_crypto_start_batch_verify_version_1", ext_crypto_start_batch_verify_version_1},
 		{"ext_trie_blake2_256_ordered_root_version_1", ext_trie_blake2_256_ordered_root_version_1},
@@ -344,7 +392,10 @@ func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtim
 		{"ext_misc_print_utf8_version_1", ext_misc_print_utf8_version_1},
 		{"ext_misc_runtime_version_version_1", ext_misc_runtime_version_version_1},
 		{"ext_default_child_storage_clear_version_1", ext_default_child_storage_clear_version_1},
+		{"ext_default_child_storage_clear_prefix_version_1", ext_default_child_storage_clear_prefix_version_1},
+		{"ext_default_child_storage_exists_version_1", ext_default_child_storage_exists_version_1},
 		{"ext_default_child_storage_get_version_1", ext_default_child_storage_get_version_1},
+		{"ext_default_child_storage_next_key_version_1", ext_default_child_storage_next_key_version_1},
 		{"ext_default_child_storage_read_version_1", ext_default_child_storage_read_version_1},
 		{"ext_default_child_storage_root_version_1", ext_default_child_storage_root_version_1},
 		{"ext_default_child_storage_set_version_1", ext_default_child_storage_set_version_1},
@@ -358,6 +409,7 @@ func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtim
 		{"ext_hashing_sha2_256_version_1", ext_hashing_sha2_256_version_1},
 		{"ext_hashing_twox_128_version_1", ext_hashing_twox_128_version_1},
 		{"ext_hashing_twox_64_version_1", ext_hashing_twox_64_version_1},
+		{"ext_hashing_twox_256_version_1", ext_hashing_twox_256_version_1},
 		{"ext_offchain_is_validator_version_1", ext_offchain_is_validator_version_1},
 		{"ext_offchain_local_storage_compare_and_set_version_1", ext_offchain_local_storage_compare_and_set_version_1},
 		{"ext_crypto_sr25519_generate_version_1", ext_crypto_sr25519_generate_version_1},
@@ -378,6 +430,7 @@ func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtim
 		{"ext_storage_root_version_1", ext_storage_root_version_1},
 		{"ext_storage_set_version_1", ext_storage_set_version_1},
 		{"ext_storage_start_transaction_version_1", ext_storage_start_transaction_version_1},
+		{"ext_trie_blake2_256_root_version_1", ext_trie_blake2_256_root_version_1},
 		{"ext_offchain_index_set_version_1", ext_offchain_index_set_version_1},
 	}
 
