@@ -17,13 +17,33 @@
 package wasmtime
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 
+	"github.com/ChainSafe/gossamer/lib/common"
 	"github.com/ChainSafe/gossamer/lib/runtime"
+	"github.com/ChainSafe/gossamer/lib/scale"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_NewTestInstance(t *testing.T) {
 	inst := NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
 	require.NotNil(t, inst)
+}
+
+func Test_ext_hashing_blake2_128_version_1(t *testing.T) {
+	inst := NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
+
+	data := []byte("helloworld")
+	enc, err := scale.Encode(data)
+	require.NoError(t, err)
+
+	ret, err := inst.Exec("rtm_ext_hashing_blake2_128_version_1", enc)
+	require.NoError(t, err)
+
+	hash, err := scale.Decode(ret, []byte{})
+	require.NoError(t, err)
+
+	expected, err := common.Blake2b128(data)
+	require.NoError(t, err)
+	require.Equal(t, expected[:], hash)
 }
