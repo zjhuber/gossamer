@@ -89,7 +89,10 @@ func newInstanceFromModule(module *wasmtime.Module, engine *wasmtime.Engine, cfg
 		Min: 23,
 		Max: wasmtime.LimitsMaxNone,
 	}
-	mem := wasmtime.NewMemory(store, wasmtime.NewMemoryType(lim))
+	mem, err := wasmtime.NewMemory(store, wasmtime.NewMemoryType(lim))
+	if err != nil {
+		return nil, err
+	}
 
 	linker, err := cfg.Imports(store, mem)
 	if err != nil {
