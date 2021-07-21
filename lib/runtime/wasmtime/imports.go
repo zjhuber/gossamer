@@ -227,7 +227,6 @@ func ext_default_child_storage_storage_kill_version_2(c *wasmtime.Caller, a, b i
 }
 
 func ext_hashing_blake2_128_version_1(c *wasmtime.Caller, dataSpan int64) int32 {
-	fmt.Printf("IN FUNCT\n")
 	logger.Trace("[ext_hashing_blake2_128_version_1] executing...")
 
 	m := c.GetExport("memory").Memory()
