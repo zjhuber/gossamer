@@ -39,7 +39,7 @@ var (
 )
 
 // ImportsFunc returns a linker with the module imports
-type ImportsFunc func(*wasmtime.Store, *wasmtime.Memory) (*wasmtime.Linker, error)
+type ImportsFunc func(*wasmtime.Store, *wasmtime.Engine, *wasmtime.Memory) (*wasmtime.Linker, error)
 
 // Config represents a wasmer configuration
 type Config struct {
@@ -49,9 +49,10 @@ type Config struct {
 
 // Instance represents a v0.8 runtime go-wasmtime instance
 type Instance struct {
-	vm  *wasmtime.Instance
-	mu  sync.Mutex
-	mem *wasmtime.Memory
+	vm    *wasmtime.Instance
+	store *wasmtime.Store
+	mu    sync.Mutex
+	mem   Memory
 }
 
 // NewInstanceFromFile instantiates a runtime from a .wasm file
@@ -94,18 +95,23 @@ func newInstanceFromModule(module *wasmtime.Module, engine *wasmtime.Engine, cfg
 		return nil, err
 	}
 
-	linker, err := cfg.Imports(store, mem)
+	linker, err := cfg.Imports(store, engine, mem)
 	if err != nil {
 		return nil, err
 	}
 
-	instance, err := linker.Instantiate(module)
+	instance, err := linker.Instantiate(store, module)
 	if err != nil {
 		return nil, err
+	}
+
+	memory := Memory{
+		memory: mem,
+		store:  store,
 	}
 
 	// TODO: use __heap_base
-	allocator := gssmrruntime.NewAllocator(Memory{mem}, 0)
+	allocator := gssmrruntime.NewAllocator(memory, 0)
 
 	ctx = gssmrruntime.Context{
 		Storage:     cfg.Storage,
@@ -117,8 +123,9 @@ func newInstanceFromModule(module *wasmtime.Module, engine *wasmtime.Engine, cfg
 	}
 
 	return &Instance{
-		vm:  instance,
-		mem: mem,
+		vm:    instance,
+		store: store,
+		mem:   memory,
 	}, nil
 }
 
@@ -165,11 +172,11 @@ func (in *Instance) exec(function string, data []byte) ([]byte, error) {
 	}
 	defer ctx.Allocator.Clear()
 
-	memdata := in.mem.UnsafeData()
+	memdata := in.mem.memory.UnsafeData(in.store)
 	copy(memdata[ptr:ptr+uint32(len(data))], data)
 
-	run := in.vm.GetExport(function).Func()
-	resi, err := run.Call(int32(ptr), int32(len(data)))
+	run := in.vm.GetExport(in.store, function).Func()
+	resi, err := run.Call(in.store, int32(ptr), int32(len(data)))
 	if err != nil {
 		return nil, err
 	}

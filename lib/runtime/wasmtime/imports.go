@@ -172,7 +172,7 @@ func ext_misc_print_num_version_1(c *wasmtime.Caller, data int64) {
 func ext_misc_print_utf8_version_1(c *wasmtime.Caller, dataSpan int64) {
 	logger.Trace("[ext_misc_print_utf8_version_1] executing...")
 	m := c.GetExport("memory").Memory()
-	data := asMemorySlice(m.UnsafeData(), dataSpan)
+	data := asMemorySlice(m.UnsafeData(c), dataSpan)
 	logger.Info("[ext_print_utf8]", "message", data)
 }
 
@@ -231,7 +231,7 @@ func ext_hashing_blake2_128_version_1(c *wasmtime.Caller, dataSpan int64) int32 
 	logger.Trace("[ext_hashing_blake2_128_version_1] executing...")
 
 	m := c.GetExport("memory").Memory()
-	data := asMemorySlice(m.UnsafeData(), dataSpan)
+	data := asMemorySlice(m.UnsafeData(c), dataSpan)
 	fmt.Printf("data %v\n", data)
 	hash, err := common.Blake2b128(data)
 	if err != nil {
@@ -382,7 +382,7 @@ func ext_offchain_index_set_version_1(c *wasmtime.Caller, a, b int64) {
 }
 
 // ImportNodeRuntime adds the imports for the v0.8 runtime to linker
-func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtime.Linker, error) {
+func ImportNodeRuntime(store *wasmtime.Store, engine *wasmtime.Engine, memory *wasmtime.Memory) (*wasmtime.Linker, error) {
 	fns := []struct {
 		name string
 		fn   interface{}
@@ -456,13 +456,13 @@ func ImportNodeRuntime(store *wasmtime.Store, memory *wasmtime.Memory) (*wasmtim
 		{"ext_trie_blake2_256_root_version_1", ext_trie_blake2_256_root_version_1},
 	}
 
-	linker := wasmtime.NewLinker(store)
+	linker := wasmtime.NewLinker(engine)
 	if err := linker.Define("env", "memory", memory); err != nil {
 		return nil, err
 	}
 
 	for _, f := range fns {
-		if err := linker.DefineFunc("env", f.name, f.fn); err != nil {
+		if err := linker.DefineFunc(store, "env", f.name, f.fn); err != nil {
 			return nil, err
 		}
 	}
@@ -483,7 +483,7 @@ func toWasmMemorySized(caller *wasmtime.Caller, data []byte, size uint32) (uint3
 	}
 
 	caller.GetExport("memory")
-	memory := caller.GetExport("memory").Memory().UnsafeData()
+	memory := caller.GetExport("memory").Memory().UnsafeData(caller)
 
 	copy(memory[out:out+size], data)
 
