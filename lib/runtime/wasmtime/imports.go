@@ -32,6 +32,7 @@ func int64ToPointerAndSize(in int64) (ptr, length int32) {
 // Convert 64bit wasm span descriptor to Go memory slice
 func asMemorySlice(memory []byte, span int64) []byte {
 	ptr, size := int64ToPointerAndSize(span)
+	fmt.Printf("ME SLICE ptr: %v size: %v\n", ptr, size)
 	return memory[ptr : ptr+size]
 }
 
