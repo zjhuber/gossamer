@@ -17,6 +17,7 @@
 package wasmtime
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/ChainSafe/gossamer/lib/common"
@@ -36,14 +37,32 @@ func Test_ext_hashing_blake2_128_version_1(t *testing.T) {
 	data := []byte("helloworld")
 	enc, err := scale.Encode(data)
 	require.NoError(t, err)
-
+fmt.Printf("enc data %v\n", enc)
 	ret, err := inst.Exec("rtm_ext_hashing_blake2_128_version_1", enc)
 	require.NoError(t, err)
-
+fmt.Printf("ret %v\n", ret)
 	hash, err := scale.Decode(ret, []byte{})
 	require.NoError(t, err)
 
 	expected, err := common.Blake2b128(data)
 	require.NoError(t, err)
 	require.Equal(t, expected[:], hash)
+}
+
+func Test_ext_storage_set_version_1(t *testing.T) {
+	inst := NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
+
+	testkey := []byte("noot")
+	testvalue := []byte("washere")
+
+	encKey, err := scale.Encode(testkey)
+	require.NoError(t, err)
+	encValue, err := scale.Encode(testvalue)
+	require.NoError(t, err)
+
+	_, err = inst.Exec("rtm_ext_storage_set_version_1", append(encKey, encValue...))
+	require.NoError(t, err)
+
+	//val := inst.ctx.Storage.Get(testkey)
+	//require.Equal(t, testvalue, val)
 }

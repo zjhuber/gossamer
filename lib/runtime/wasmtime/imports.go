@@ -231,6 +231,15 @@ func ext_hashing_blake2_128_version_1(c *wasmtime.Caller, dataSpan int64) int32 
 	logger.Trace("[ext_hashing_blake2_128_version_1] executing...")
 
 	m := c.GetExport("memory").Memory()
+	size := m.Size(c)
+
+fmt.Printf("size %v\n", size)
+	fmt.Printf("dataspan %v\n", dataSpan)
+	fmt.Printf("unsafeData %v\n", m.UnsafeData(c)[:100])
+	//dataptr := m.Data(c)
+	//
+	//fmt.Printf("data %v\n", dataptr)
+
 	data := asMemorySlice(m.UnsafeData(c), dataSpan)
 	fmt.Printf("data %v\n", data)
 	hash, err := common.Blake2b128(data)
@@ -364,8 +373,11 @@ func ext_storage_root_version_1(c *wasmtime.Caller) int64 {
 	return 0
 }
 
-func ext_storage_set_version_1(c *wasmtime.Caller, a, b int64) {
+func ext_storage_set_version_1(c *wasmtime.Caller, keySpan, valueSpan int64) {
 	logger.Trace("[ext_storage_set_version_1] executing...")
+
+	fmt.Printf("keySpan %v, valueSpan %v\n", keySpan, valueSpan)
+
 }
 
 func ext_storage_start_transaction_version_1(c *wasmtime.Caller) {
