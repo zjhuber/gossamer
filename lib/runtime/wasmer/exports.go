@@ -17,7 +17,6 @@
 package wasmer
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -47,7 +46,7 @@ func (in *Instance) ValidateTransaction(e types.Extrinsic) (*transaction.Validit
 // Version calls runtime function Core_Version
 func (in *Instance) Version() (runtime.Version, error) {
 	// kusama seems to use the legacy version format
-	if in.version != nil && bytes.Equal(in.version.SpecName(), []byte("kusama")) {
+	if in.version != nil {
 		return in.version, nil
 	}
 
@@ -173,6 +172,11 @@ func (in *Instance) ExecuteBlock(block *types.Block) ([]byte, error) {
 	}
 
 	return in.exec(runtime.CoreExecuteBlock, bdEnc)
+}
+
+// DecodeSessionKeys decodes the given public session keys. Returns a list of raw public keys including their key type.
+func (in *Instance) DecodeSessionKeys(enc []byte) ([]byte, error) {
+	return in.exec(runtime.DecodeSessionKeys, enc)
 }
 
 func (in *Instance) CheckInherents()      {} //nolint

@@ -36,7 +36,7 @@ type BlockAPI interface {
 	RegisterImportedChannel(ch chan<- *types.Block) (byte, error)
 	UnregisterImportedChannel(id byte)
 	RegisterFinalizedChannel(ch chan<- *types.FinalisationInfo) (byte, error)
-	UnregisterFinalizedChannel(id byte)
+	UnregisterFinalisedChannel(id byte)
 	SubChain(start, end common.Hash) ([]common.Hash, error)
 }
 
@@ -76,17 +76,13 @@ type CoreAPI interface {
 	GetRuntimeVersion(bhash *common.Hash) (runtime.Version, error)
 	HandleSubmittedExtrinsic(types.Extrinsic) error
 	GetMetadata(bhash *common.Hash) ([]byte, error)
+	DecodeSessionKeys(enc []byte) ([]byte, error)
 }
 
 // RPCAPI is the interface for methods related to RPC service
 type RPCAPI interface {
 	Methods() []string
 	BuildMethodNames(rcvr interface{}, name string)
-}
-
-// RuntimeAPI is the interface for runtime methods
-type RuntimeAPI interface {
-	ValidateTransaction(e types.Extrinsic) (*transaction.Validity, error)
 }
 
 // SystemAPI is the interface for handling system methods
