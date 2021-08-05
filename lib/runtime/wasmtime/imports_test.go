@@ -17,10 +17,13 @@
 package wasmtime
 
 import (
-	"fmt"
+	"bytes"
 	"testing"
 
 	"github.com/ChainSafe/gossamer/lib/common"
+	"github.com/ChainSafe/gossamer/lib/common/optional"
+	"github.com/ChainSafe/gossamer/lib/crypto/ed25519"
+	"github.com/ChainSafe/gossamer/lib/keystore"
 	"github.com/ChainSafe/gossamer/lib/runtime"
 	"github.com/ChainSafe/gossamer/lib/scale"
 	"github.com/stretchr/testify/require"
@@ -37,10 +40,10 @@ func Test_ext_hashing_blake2_128_version_1(t *testing.T) {
 	data := []byte("helloworld")
 	enc, err := scale.Encode(data)
 	require.NoError(t, err)
-fmt.Printf("enc data %v\n", enc)
+
 	ret, err := inst.Exec("rtm_ext_hashing_blake2_128_version_1", enc)
 	require.NoError(t, err)
-fmt.Printf("ret %v\n", ret)
+
 	hash, err := scale.Decode(ret, []byte{})
 	require.NoError(t, err)
 
@@ -63,6 +66,42 @@ func Test_ext_storage_set_version_1(t *testing.T) {
 	_, err = inst.Exec("rtm_ext_storage_set_version_1", append(encKey, encValue...))
 	require.NoError(t, err)
 
+	// TODO, add checks below when exec is working
 	//val := inst.ctx.Storage.Get(testkey)
 	//require.Equal(t, testvalue, val)
+}
+
+func Test_ext_crypto_ed25519_sign_version_1(t *testing.T) {
+	inst := NewTestInstance(t, runtime.HOST_API_TEST_RUNTIME)
+
+	kp, err := ed25519.GenerateKeypair()
+	require.NoError(t, err)
+
+	idData := []byte(keystore.AccoName)
+	ks, _ := ctx.Keystore.GetKeystore(idData)
+	ks.Insert(kp)
+
+	pubKeyData := kp.Public().Encode()
+	encPubKey, err := scale.Encode(pubKeyData)
+	require.NoError(t, err)
+
+	msgData := []byte("Hello world!")
+	encMsg, err := scale.Encode(msgData)
+	require.NoError(t, err)
+
+	res, err := inst.Exec("rtm_ext_crypto_ed25519_sign_version_1", append(append(idData, encPubKey...), encMsg...))
+	require.NoError(t, err)
+
+	out, err := scale.Decode(res, []byte{})
+	require.NoError(t, err)
+
+	buf := &bytes.Buffer{}
+	buf.Write(out.([]byte))
+
+	value, err := new(optional.FixedSizeBytes).Decode(buf)
+	require.NoError(t, err)
+
+	ok, err := kp.Public().Verify(msgData, value.Value())
+	require.NoError(t, err)
+	require.True(t, ok)
 }

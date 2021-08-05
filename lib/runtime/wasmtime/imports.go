@@ -32,7 +32,6 @@ func int64ToPointerAndSize(in int64) (ptr, length int32) {
 // Convert 64bit wasm span descriptor to Go memory slice
 func asMemorySlice(memory []byte, span int64) []byte {
 	ptr, size := int64ToPointerAndSize(span)
-	fmt.Printf("ME SLICE ptr: %v size: %v\n", ptr, size)
 	return memory[ptr : ptr+size]
 }
 
@@ -100,8 +99,53 @@ func ext_crypto_ed25519_public_keys_version_1(c *wasmtime.Caller, a int32) int64
 	return 0
 }
 
-func ext_crypto_ed25519_sign_version_1(c *wasmtime.Caller, a, b int32, z int64) int64 {
-	logger.Trace("[ext_crypto_ed25519_sign_version_1] executing...")
+func ext_crypto_ed25519_sign_version_1(c *wasmtime.Caller, keyTypeID, key int32, msg int64) int64 {
+	logger.Trace("[ext_crypto_ed25519_sign_version_1] executing...", "keyTypeID", keyTypeID, "key", key, "msg", msg)
+
+	//instanceContext := wasm.IntoInstanceContext(context)
+	//runtimeCtx := instanceContext.Data().(*runtime.Context)
+	//memory := instanceContext.Memory().Data()
+	//
+	//id := memory[keyTypeID : keyTypeID+4]
+	//
+	//pubKeyData := memory[key : key+32]
+	//pubKey, err := ed25519.NewPublicKey(pubKeyData)
+	//if err != nil {
+	//	logger.Error("[ext_crypto_ed25519_sign_version_1] failed to get public keys", "error", err)
+	//	return 0
+	//}
+	//
+	//ks, err := runtimeCtx.Keystore.GetKeystore(id)
+	//if err != nil {
+	//	logger.Warn("[ext_crypto_ed25519_sign_version_1]", "name", id, "error", err)
+	//	ret, _ := toWasmMemoryOptional(instanceContext, nil)
+	//	return ret
+	//}
+	//
+	//var ret int64
+	//signingKey := ks.GetKeypair(pubKey)
+	//if signingKey == nil {
+	//	logger.Error("[ext_crypto_ed25519_sign_version_1] could not find public key in keystore", "error", pubKey)
+	//	ret, err = toWasmMemoryOptional(instanceContext, nil)
+	//	if err != nil {
+	//		logger.Error("[ext_crypto_ed25519_sign_version_1] failed to allocate memory", err)
+	//		return 0
+	//	}
+	//	return ret
+	//}
+	//
+	//sig, err := signingKey.Sign(asMemorySlice(instanceContext, msg))
+	//if err != nil {
+	//	logger.Error("[ext_crypto_ed25519_sign_version_1] could not sign message")
+	//}
+	//
+	//ret, err = toWasmMemoryFixedSizeOptional(instanceContext, sig)
+	//if err != nil {
+	//	logger.Error("[ext_crypto_ed25519_sign_version_1] failed to allocate memory", err)
+	//	return 0
+	//}
+	//
+	//return ret
 	return 0
 }
 
@@ -228,20 +272,11 @@ func ext_default_child_storage_storage_kill_version_2(c *wasmtime.Caller, a, b i
 }
 
 func ext_hashing_blake2_128_version_1(c *wasmtime.Caller, dataSpan int64) int32 {
-	logger.Trace("[ext_hashing_blake2_128_version_1] executing...")
+	logger.Trace("[ext_hashing_blake2_128_version_1] executing...", "dataSpan", dataSpan)
 
 	m := c.GetExport("memory").Memory()
-	size := m.Size(c)
-
-fmt.Printf("size %v\n", size)
-	fmt.Printf("dataspan %v\n", dataSpan)
-	fmt.Printf("unsafeData %v\n", m.UnsafeData(c)[:100])
-	//dataptr := m.Data(c)
-	//
-	//fmt.Printf("data %v\n", dataptr)
 
 	data := asMemorySlice(m.UnsafeData(c), dataSpan)
-	fmt.Printf("data %v\n", data)
 	hash, err := common.Blake2b128(data)
 	if err != nil {
 		logger.Error("[ext_hashing_blake2_128_version_1]", "error", err)
@@ -374,9 +409,7 @@ func ext_storage_root_version_1(c *wasmtime.Caller) int64 {
 }
 
 func ext_storage_set_version_1(c *wasmtime.Caller, keySpan, valueSpan int64) {
-	logger.Trace("[ext_storage_set_version_1] executing...")
-
-	fmt.Printf("keySpan %v, valueSpan %v\n", keySpan, valueSpan)
+	logger.Trace("[ext_storage_set_version_1] executing...", "keySpan", keySpan, "valueSpan", valueSpan)
 
 }
 
