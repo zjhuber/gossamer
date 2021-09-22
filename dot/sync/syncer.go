@@ -357,12 +357,14 @@ func (s *Service) handleJustification(header *types.Header, justification []byte
 	err := s.finalityGadget.VerifyBlockJustification(header.Hash(), justification)
 	if err != nil {
 		logger.Warn("failed to verify block justification", "hash", header.Hash(), "number", header.Number, "error", err)
+		// Handle peerScore here...
+
 		return
 	}
 
 	err = s.blockState.SetJustification(header.Hash(), justification)
 	if err != nil {
-		logger.Error("failed tostore justification", "error", err)
+		logger.Error("failed to store justification", "error", err)
 		return
 	}
 
