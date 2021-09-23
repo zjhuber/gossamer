@@ -113,7 +113,6 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
-	"sort"
 	"unsafe"
 
 	"github.com/ChainSafe/gossamer/dot/types"
@@ -1123,7 +1122,7 @@ func ext_default_child_storage_storage_kill_version_1(context unsafe.Pointer, ch
 //export ext_default_child_storage_storage_kill_version_2
 func ext_default_child_storage_storage_kill_version_2(context unsafe.Pointer, childStorageKeySpan C.int64_t, lim C.int32_t) C.int32_t {
 	logger.Debug("[ext_default_child_storage_storage_kill_version_2] executing...")
-
+fmt.Printf("lim %v \n", lim)
 	instanceContext := wasm.IntoInstanceContext(context)
 	ctx := instanceContext.Data().(*runtime.Context)
 	storage := ctx.Storage
@@ -1143,30 +1142,33 @@ func ext_default_child_storage_storage_kill_version_2(context unsafe.Pointer, ch
 	if limit.Exists() {
 		limitUint = binary.LittleEndian.Uint32(limit.Value())
 	}
+fmt.Printf("LimitUint %v\n", limitUint)
+	//tr, err := storage.GetChild(childStorageKey)
+	//if err != nil {
+	//	logger.Warn("[ext_default_child_storage_storage_kill_version_2] cannot get child storage", "error", err)
+	//}
 
-	tr, err := storage.GetChild(childStorageKey)
-	if err != nil {
-		logger.Warn("[ext_default_child_storage_storage_kill_version_2] cannot get child storage", "error", err)
-	}
+	delQty := storage.DeleteChildLimit(childStorageKey, limitUint)
+	fmt.Printf("delQty %v\n", delQty)
 
-	if int(limitUint) >= len(tr.Entries()) || !limit.Exists() {
-		storage.DeleteChild(childStorageKey)
-		return 0
-	}
-
-	keys := make([]string, 0, len(tr.Entries()))
-	for k := range tr.Entries() {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	deleted := uint32(0)
-	for _, k := range keys {
-		tr.Delete([]byte(k))
-		deleted++
-		if deleted == limitUint {
-			return 1
-		}
-	}
+	//if int(limitUint) >= len(tr.Entries()) || !limit.Exists() {
+	//	storage.DeleteChild(childStorageKey)
+	//	return 0
+	//}
+	//
+	//keys := make([]string, 0, len(tr.Entries()))
+	//for k := range tr.Entries() {
+	//	keys = append(keys, k)
+	//}
+	//sort.Strings(keys)
+	//deleted := uint32(0)
+	//for _, k := range keys {
+	//	tr.Delete([]byte(k))
+	//	deleted++
+	//	if deleted == limitUint {
+	//		return 1
+	//	}
+	//}
 
 	return 0
 }

@@ -66,6 +66,7 @@ type Storage interface {
 	GetChildStorage(keyToChild, key []byte) ([]byte, error)
 	Delete(key []byte)
 	DeleteChild(keyToChild []byte)
+	DeleteChildLimit(keyToChild []byte, limit uint32) uint32
 	ClearChildStorage(keyToChild, key []byte) error
 	NextKey([]byte) []byte
 	ClearPrefixInChild(keyToChild, prefix []byte) error

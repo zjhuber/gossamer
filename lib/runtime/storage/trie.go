@@ -178,6 +178,10 @@ func (s *TrieState) DeleteChild(key []byte) {
 	s.t.DeleteChild(key)
 }
 
+func (s *TrieState) DeleteChildLimit(key []byte, limit uint32) uint32 {
+	return 0
+}
+
 // ClearChildStorage removes the child storage entry from the trie
 func (s *TrieState) ClearChildStorage(keyToChild, key []byte) error {
 	s.lock.Lock()
