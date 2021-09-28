@@ -20,10 +20,12 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/ChainSafe/gossamer/dot/peerset"
 	"github.com/ChainSafe/gossamer/dot/types"
 	"github.com/ChainSafe/gossamer/lib/common"
 	"github.com/ChainSafe/gossamer/lib/runtime"
 	rtstorage "github.com/ChainSafe/gossamer/lib/runtime/storage"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // BlockState is the interface for the block state
@@ -79,10 +81,14 @@ type Verifier interface {
 // FinalityGadget implements justification verification functionality
 type FinalityGadget interface {
 	VerifyBlockJustification(common.Hash, []byte) error
-	//ReportPeer()
 }
 
 // BlockImportHandler is the interface for the handler of newly imported blocks
 type BlockImportHandler interface {
 	HandleBlockImport(block *types.Block, state *rtstorage.TrieState) error
+}
+
+// Network is the interface for the peerSet actions
+type Network interface {
+	ReportPeer(peer.ID, peerset.ReputationChange)
 }

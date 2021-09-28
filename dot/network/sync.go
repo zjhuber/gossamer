@@ -26,14 +26,32 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ChainSafe/chaindb"
+	"github.com/ChainSafe/gossamer/dot/peerset"
 	"github.com/ChainSafe/gossamer/dot/types"
 	"github.com/ChainSafe/gossamer/lib/blocktree"
 	"github.com/ChainSafe/gossamer/lib/common"
 	"github.com/ChainSafe/gossamer/lib/common/variadic"
-
-	"github.com/ChainSafe/chaindb"
 	libp2pnetwork "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+)
+
+const (
+	// Reputation change for peers which send us a block with an incomplete header.
+	incompleteHeaderValue  = -(1 << 20)
+	incompleteHeaderReason = "Incomplete header"
+
+	// Reputation change for peers which send us a block with bad justifications.
+	badJustificationValue  = -(1 << 16)
+	badJustificationReason = "Bad Justification"
+
+	// Peer response data does not have requested bits.
+	badResponseValue  = -(1 << 12)
+	badResponseReason = "Incomplete response"
+
+	// Peer did not provide us with advertised block data.
+	noBlockValue  = -(1 << 29)
+	noBlockReason = "No requested block data"
 )
 
 // SendBlockReqestByHash sends a block request to the network with the given block hash
@@ -492,6 +510,11 @@ func (q *syncQueue) pushRequest(start uint64, numRequests int, to peer.ID) {
 
 func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error {
 	if len(resp.BlockData) == 0 {
+		q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
+			Value:  badResponseValue,
+			Reason: badResponseReason,
+		})
+
 		return errEmptyResponseData
 	}
 
@@ -510,6 +533,12 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 
 		if numJustifications == 0 {
 			logger.Debug("got empty justification data", "start hash", startHash)
+
+			q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
+				Value:  badJustificationValue,
+				Reason: badJustificationReason,
+			})
+
 			return errEmptyJustificationData
 		}
 
@@ -529,12 +558,21 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 	if err != nil {
 		// update peer's score
 		q.updatePeerScore(pid, -1)
+		q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
+			Value:  incompleteHeaderValue,
+			Reason: incompleteHeaderReason,
+		})
 		return fmt.Errorf("response doesn't contain block headers")
 	}
 
 	if resp.BlockData[0].Body == nil {
 		// update peer's score
 		q.updatePeerScore(pid, -1)
+		q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
+			Value:  noBlockValue,
+			Reason: noBlockReason,
+		})
+
 		return fmt.Errorf("response doesn't contain block bodies")
 	}
 
@@ -867,12 +905,21 @@ func (q *syncQueue) handleBlockAnnounce(msg *BlockAnnounceMessage, from peer.ID)
 
 	header, err := types.NewHeader(msg.ParentHash, msg.StateRoot, msg.ExtrinsicsRoot, msg.Number, msg.Digest)
 	if err != nil {
+		q.s.host.cm.peerSetHandler.ReportPeer(from, peerset.ReputationChange{
+			Value:  incompleteHeaderValue,
+			Reason: incompleteHeaderReason,
+		})
 		logger.Error("failed to create header from BlockAnnounce", "error", err)
 		return
 	}
 
 	has, _ := q.s.blockState.HasBlockBody(header.Hash())
 	if has {
+		q.s.ReportPeer(from, peerset.ReputationChange{
+			Value:  noBlockValue,
+			Reason: noBlockReason,
+		})
+
 		return
 	}
 

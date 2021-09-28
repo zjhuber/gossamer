@@ -42,7 +42,7 @@ type Service struct {
 	transactionState   TransactionState
 	finalityGadget     FinalityGadget
 	blockImportHandler BlockImportHandler
-
+	network            Network
 	// Synchronisation variables
 	synced           bool
 	highestSeenBlock *big.Int // highest block number we have seen
@@ -61,6 +61,7 @@ type Config struct {
 	BlockImportHandler BlockImportHandler
 	Runtime            runtime.Instance
 	Verifier           Verifier
+	Network            Network
 }
 
 // NewService returns a new *sync.Service
@@ -94,6 +95,7 @@ func NewService(cfg *Config) (*Service, error) {
 		highestSeenBlock:   big.NewInt(0),
 		transactionState:   cfg.TransactionState,
 		verifier:           cfg.Verifier,
+		network:            cfg.Network,
 	}, nil
 }
 
@@ -357,8 +359,7 @@ func (s *Service) handleJustification(header *types.Header, justification []byte
 	err := s.finalityGadget.VerifyBlockJustification(header.Hash(), justification)
 	if err != nil {
 		logger.Warn("failed to verify block justification", "hash", header.Hash(), "number", header.Number, "error", err)
-		// Handle peerScore here...
-
+		// TODO: Handle appropriate peer score here.
 		return
 	}
 

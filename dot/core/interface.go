@@ -21,11 +21,13 @@ import (
 	"sync"
 
 	"github.com/ChainSafe/gossamer/dot/network"
+	"github.com/ChainSafe/gossamer/dot/peerset"
 	"github.com/ChainSafe/gossamer/dot/types"
 	"github.com/ChainSafe/gossamer/lib/common"
 	"github.com/ChainSafe/gossamer/lib/runtime"
 	rtstorage "github.com/ChainSafe/gossamer/lib/runtime/storage"
 	"github.com/ChainSafe/gossamer/lib/transaction"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // BlockState interface for block state methods
@@ -77,6 +79,7 @@ type TransactionState interface {
 // Network is the interface for the network service
 type Network interface {
 	GossipMessage(network.NotificationsMessage)
+	ReportPeer(p peer.ID, change peerset.ReputationChange)
 }
 
 // EpochState is the interface for state.EpochState

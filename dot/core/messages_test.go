@@ -31,7 +31,6 @@ import (
 	"github.com/ChainSafe/gossamer/lib/keystore"
 	"github.com/ChainSafe/gossamer/lib/runtime"
 	"github.com/ChainSafe/gossamer/pkg/scale"
-
 	"github.com/centrifuge/go-substrate-rpc-client/v3/signature"
 	ctypes "github.com/centrifuge/go-substrate-rpc-client/v3/types"
 
@@ -128,6 +127,8 @@ func TestService_ProcessBlockAnnounceMessage(t *testing.T) {
 }
 
 func TestService_HandleTransactionMessage(t *testing.T) {
+	const peer1 = "testPeer1"
+
 	kp, err := sr25519.GenerateKeypair()
 	require.NoError(t, err)
 
@@ -162,7 +163,7 @@ func TestService_HandleTransactionMessage(t *testing.T) {
 
 	extBytes := createExtrinsic(t, rt, genHash, 0)
 	msg := &network.TransactionMessage{Extrinsics: []types.Extrinsic{extBytes}}
-	b, err := s.HandleTransactionMessage(msg)
+	b, err := s.HandleTransactionMessage(peer1, msg)
 	require.NoError(t, err)
 	require.True(t, b)
 
@@ -172,7 +173,7 @@ func TestService_HandleTransactionMessage(t *testing.T) {
 
 	extBytes = []byte(`bogus extrinsic`)
 	msg = &network.TransactionMessage{Extrinsics: []types.Extrinsic{extBytes}}
-	b, err = s.HandleTransactionMessage(msg)
+	b, err = s.HandleTransactionMessage(peer1, msg)
 	require.NoError(t, err)
 	require.False(t, b)
 }
