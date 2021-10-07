@@ -4,35 +4,39 @@ title: Package Library
 permalink: /welcome/package-library/
 ---
 
-## Overview
+Gossamer is inspired by Substrate, a highly modular, flexible, and customizeable framework for building blockchains and this inspiration is reflected by the structure of Gossamer's package library.
 
-Gossamer is a **modular blockchain framework**; it was designed with a package structure that makes it possible to reuse Gossamer packages to build and run custom nodes and node services.
+This document provides an overview of the packages that make up Gossamer - for more detailed information about each package, please refer to [Gossamer's official Go reference documentation](https://pkg.go.dev/github.com/ChainSafe/gossamer).
 
-This document provides an overview of the packages that make up the Gossamer framework - more detailed information about each package can be found at <a target="_blank" rel="noopener noreferrer" href="https://pkg.go.dev/github.com/ChainSafe/gossamer">pkg.go.dev/ChainSafe/gossamer</a>.
+Gossamer packages can be categorized into **four package types**, which directly correspond to top-level directories in the Gossamer code base:
 
-Gossamer packages can be categorized into **four package types**:
+- **[cmd package](#cmd-package)**
 
-- **[cmd packages](#cmd-packages)**
-
-    - `cmd/...` - command-line packages for running nodes and other services
+    - `cmd/gossamer` - this package encapsulates Gossamer's command-line interface and serve as the entrypoint for users
 
 - **[dot packages](#dot-packages)**
 
-    - `dot/...` - the dot node package and host node service packages
+    - `dot/...` - packages in this directory implement various standards that are relevant to the Polkadot Network
 
 - **[lib packages](#lib-packages)**
 
-    - `lib/...` - modular packages for building nodes and other services
+    - `lib/...` - this directory contains packages that encapsulate reusable logic for building blockchains and more
 
-- **[test packages](#test-packages)**
+- **[SCALE package](#scale-package)**
 
-    - `tests/...` - test packages for integration tests
+    - `pkg/scale` - this package provides [SCALE](https://substrate.dev/docs/en/knowledgebase/advanced/codec) encoding and decoding capabilities
 
-## cmd packages
+- **[chain packages](#chain-packages)**
+
+    - `chain/...` - the subdirectories in this directory contain configuration parameters for the blockchain networks that Gossamer supports
+
+## cmd package
 
 #### `cmd/gossamer`
 
-- The **gossamer package** is used to run nodes built with Gossamer.
+- The entrypoint of this package is [`main.go`](https://github.com/ChainSafe/gossamer/blob/development/cmd/gossamer/main.go); this file defines the subcommands that the Gossamer command line interface accepts and implements "actions" that correspond to each of this subcommands. Gossamer uses [the popular `cli` package](https://github.com/urfave/cli/blob/master/docs/v1/manual.md) from `urfave` to provide its command line interface capabilities. The actions defined in `main.go` are:
+
+    - `gossamerAction` - This is the action that is invoked when the Gossamer command line interface is executed without a subcommand; it accepts a number of parameters and will launch a Gossamer blockchain client.
 
 ## dot packages
 
@@ -113,20 +117,3 @@ Gossamer packages can be categorized into **four package types**:
 #### `lib/utils`
 
 - the **utils package** is used to manage node and test directories.
-
-## test packages
-
-#### `tests/polkadotjs_test`
-- the **polkadotjs_test section** is a node.js implementation to test interaction with Gossamer's RPC.
-
-#### `tests/rpc`
-- the **rpc test collection** comprises tests to cover the RPC's various endpoints and return data.
-
-#### `tests/stress`
-- the **stress test collection** comprises tests to simulate the node running under various high stress scenarios
-
-#### `tests/sync`
-- the **sync test collection** comprises tests to verify the integrity of syncing operations and features
-
-#### `tests/utils`
-- the **utils test collection** comprises tests to validate the function of various utilities throughout the Gossamer stack
