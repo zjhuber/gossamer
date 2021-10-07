@@ -195,12 +195,6 @@ func (cm *ConnManager) Disconnected(n network.Network, c network.Conn) {
 		cm.disconnectHandler(c.RemotePeer())
 	}
 
-	// TODO Analyse if this is at correct place along with reason and find usage of RefusedDrop.
-	_ = cm.peerSetHandler.Dropped(0, c.RemotePeer(), peerset.UnknownDrop)
-}
-
-func (cm *ConnManager) registerDisconnectHandler(cb func(peer.ID)) {
-	cm.disconnectHandler = cb
 }
 
 // OpenedStream is called when a stream opened

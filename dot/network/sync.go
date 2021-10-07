@@ -147,7 +147,6 @@ type syncQueue struct {
 	slotDuration time.Duration
 	ctx          context.Context
 	cancel       context.CancelFunc
-	peerScore    *sync.Map // map[peer.ID]int; peers we have successfully synced from before -> their score; score increases on successful response
 
 	requestDataByHash        *sync.Map // map[common.Hash]requestData; caching requestData by hash
 	requestData              *sync.Map // map[uint64]requestData; map of start # of request -> requestData
@@ -175,7 +174,6 @@ func newSyncQueue(s *Service) *syncQueue {
 		slotDuration:                defaultSlotDuration,
 		ctx:                         ctx,
 		cancel:                      cancel,
-		peerScore:                   new(sync.Map),
 		requestData:                 new(sync.Map),
 		requestDataByHash:           new(sync.Map),
 		justificationRequestData:    new(sync.Map),
@@ -302,6 +300,7 @@ func (q *syncQueue) handleResponseQueue() {
 	}
 }
 
+// TODO: check this functionality in the peerSet then remove this function.
 // prune peers with low score and connect to new peers
 func (q *syncQueue) prunePeers() {
 	t := time.NewTicker(q.prunePeersDuration)
@@ -317,7 +316,6 @@ func (q *syncQueue) prunePeers() {
 
 		peers := q.getSortedPeers()
 		numPruned := 0
-
 		for i := len(peers) - 1; i >= 0; i-- {
 			// we're at our minimum peer count, don't disconnect from any more peers
 			// we should discover more peers via dht between now and the next prune iteration
@@ -427,28 +425,11 @@ func (q *syncQueue) stop() {
 func (q *syncQueue) getSortedPeers() []*syncPeer {
 	peers := []*syncPeer{}
 
-	q.peerScore.Range(func(pid, score interface{}) bool {
-		peers = append(peers, &syncPeer{
-			pid:   pid.(peer.ID),
-			score: score.(int),
-		})
-		return true
-	})
-
 	sort.Slice(peers, func(i, j int) bool {
 		return peers[i].score > peers[j].score
 	})
 
 	return peers
-}
-
-func (q *syncQueue) updatePeerScore(pid peer.ID, amt int) {
-	score, ok := q.peerScore.Load(pid)
-	if !ok {
-		q.peerScore.Store(pid, amt)
-	} else {
-		q.peerScore.Store(pid, score.(int)+amt)
-	}
 }
 
 func (q *syncQueue) pushRequest(start uint64, numRequests int, to peer.ID) {
@@ -542,7 +523,6 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 			return errEmptyJustificationData
 		}
 
-		q.updatePeerScore(pid, 1)
 		q.justificationRequestData.Store(startHash, requestData{
 			sent:     true,
 			received: true,
@@ -556,8 +536,7 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 
 	start, end, err := resp.getStartAndEnd()
 	if err != nil {
-		// update peer's score
-		q.updatePeerScore(pid, -1)
+		// update peer's reputation
 		q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
 			Value:  incompleteHeaderValue,
 			Reason: incompleteHeaderReason,
@@ -566,8 +545,7 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 	}
 
 	if resp.BlockData[0].Body == nil {
-		// update peer's score
-		q.updatePeerScore(pid, -1)
+		// update peer's reputation
 		q.s.host.cm.peerSetHandler.ReportPeer(pid, peerset.ReputationChange{
 			Value:  noBlockValue,
 			Reason: noBlockReason,
@@ -575,9 +553,6 @@ func (q *syncQueue) pushResponse(resp *BlockResponseMessage, pid peer.ID) error 
 
 		return fmt.Errorf("response doesn't contain block bodies")
 	}
-
-	// update peer's score
-	q.updatePeerScore(pid, 1)
 
 	reqdata := requestData{
 		sent:     true,
@@ -675,27 +650,35 @@ func (q *syncQueue) trySync(req *syncRequest) {
 		}
 
 		logger.Trace("failed to sync with peer", "peer", req.to, "error", err)
-		q.updatePeerScore(req.to, -1)
 	}
 
 	logger.Trace("trying peers in prioritised order...")
-	syncPeers := q.getSortedPeers()
+	sortedPeerChan := q.s.host.cm.peerSetHandler.GetSortedPeers()
 
-	for i, peer := range syncPeers {
-		// if peer doesn't respond multiple times, then ignore them TODO: determine best values for this
+	connectedPeers := <-sortedPeerChan
+	close(sortedPeerChan)
+
+	peers, ok := connectedPeers.(peer.IDSlice)
+	if !ok {
+		logger.Error("failed to get connected peers from peerSet")
+		return
+	}
+
+	for i, p := range peers {
+		// if p doesn't respond multiple times, then ignore them TODO: determine best values for this
 		// TODO: if we only have a few peers, should we do this check at all?
-		if peer.score <= badPeerThreshold && i > q.s.cfg.MinPeers {
+		if i > q.s.cfg.MinPeers {
 			break
 		}
 
-		resp, err := q.syncWithPeer(peer.pid, req.req)
+		resp, err := q.syncWithPeer(p, req.req)
 		if err != nil {
-			logger.Trace("failed to sync with peer", "peer", peer.pid, "error", err)
-			q.updatePeerScore(peer.pid, -1)
+			logger.Trace("failed to sync with peer", "peer", p, "error", err)
+			// TODO: add peer reputation
 			continue
 		}
 
-		err = q.pushResponse(resp, peer.pid)
+		err = q.pushResponse(resp, p)
 		if err != nil && err != errEmptyResponseData && err != errEmptyJustificationData {
 			logger.Debug("failed to push block response", "error", err)
 		} else {
@@ -788,16 +771,12 @@ func (q *syncQueue) handleBlockJustification(data []*types.BlockData) {
 
 	logger.Debug("finished processing justification data", "start", startHash, "end", endHash)
 
-	// update peer's score
-	var from peer.ID
-
-	d, ok := q.justificationRequestData.Load(startHash)
+	_, ok := q.justificationRequestData.Load(startHash)
 	if !ok {
 		// this shouldn't happen
 		logger.Debug("can't find request data for response!", "start", startHash)
 	} else {
-		from = d.(requestData).from
-		q.updatePeerScore(from, 2)
+		// TODO: add peer reputation
 		q.justificationRequestData.Delete(startHash)
 	}
 }
@@ -840,7 +819,7 @@ func (q *syncQueue) handleBlockData(data []*types.BlockData) {
 		logger.Debug("can't find request data for response!", "start", q.currStart)
 	} else {
 		from = d.(requestData).from
-		q.updatePeerScore(from, 2)
+		// TODO: add peer reputation
 		q.requestData.Delete(uint64(q.currStart))
 	}
 
@@ -882,7 +861,7 @@ func (q *syncQueue) handleBlockDataFailure(idx int, err error, data []*types.Blo
 
 // handleBlockAnnounceHandshake handles a block that a peer claims to have through a HandleBlockAnnounceHandshake
 func (q *syncQueue) handleBlockAnnounceHandshake(blockNum uint32, from peer.ID) {
-	q.updatePeerScore(from, 1)
+	// TODO: add peer reputation
 
 	bestNum, err := q.s.blockState.BestBlockNumber()
 	if err != nil {
@@ -900,7 +879,6 @@ func (q *syncQueue) handleBlockAnnounceHandshake(blockNum uint32, from peer.ID) 
 }
 
 func (q *syncQueue) handleBlockAnnounce(msg *BlockAnnounceMessage, from peer.ID) {
-	q.updatePeerScore(from, 1)
 	logger.Debug("received BlockAnnounce", "number", msg.Number, "from", from)
 
 	header, err := types.NewHeader(msg.ParentHash, msg.StateRoot, msg.ExtrinsicsRoot, msg.Number, msg.Digest)

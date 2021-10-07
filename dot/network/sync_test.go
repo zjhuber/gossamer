@@ -27,6 +27,7 @@ import (
 	"github.com/ChainSafe/gossamer/dot/types"
 	"github.com/ChainSafe/gossamer/lib/common/variadic"
 	"github.com/ChainSafe/gossamer/lib/utils"
+	"github.com/libp2p/go-libp2p-core/peerstore"
 
 	"github.com/ChainSafe/chaindb"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -245,9 +246,7 @@ func TestSyncQueue_HandleBlockAnnounceHandshake(t *testing.T) {
 
 	testPeerID := peer.ID("noot")
 	q.handleBlockAnnounceHandshake(uint32(testNum), testPeerID)
-	score, ok := q.peerScore.Load(testPeerID)
-	require.True(t, ok)
-	require.Equal(t, 1, score.(int))
+	// TODO: update peer reputation
 	require.Equal(t, testNum, q.goal)
 	require.Equal(t, 6, len(q.requestCh))
 
@@ -265,9 +264,7 @@ func TestSyncQueue_HandleBlockAnnounce(t *testing.T) {
 
 	testPeerID := peer.ID("noot")
 	q.handleBlockAnnounce(testBlockAnnounceMessage, testPeerID)
-	score, ok := q.peerScore.Load(testPeerID)
-	require.True(t, ok)
-	require.Equal(t, 1, score.(int))
+	// TODO: update peer reputation
 	require.Equal(t, testBlockAnnounceMessage.Number.Int64(), q.goal)
 	require.Equal(t, 1, len(q.requestCh))
 
@@ -314,28 +311,22 @@ func TestSyncQueue_ProcessBlockRequests(t *testing.T) {
 
 	// connect A and B
 	addrInfoB := nodeB.host.addrInfo()
-	err := nodeA.host.connect(addrInfoB)
-	if failedToDial(err) {
-		time.Sleep(TestBackoffTimeout)
-		err = nodeA.host.connect(addrInfoB)
-	}
-	require.NoError(t, err)
+	nodeA.host.h.Peerstore().AddAddrs(addrInfoB.ID, addrInfoB.Addrs, peerstore.PermanentAddrTTL)
+	nodeA.host.cm.peerSetHandler.AddToPeerSet(0, addrInfoB.ID)
+	time.Sleep(time.Millisecond * 200)
 
 	// connect A and C
 	addrInfoC := nodeC.host.addrInfo()
-	err = nodeA.host.connect(addrInfoC)
-	if failedToDial(err) {
-		time.Sleep(TestBackoffTimeout)
-		err = nodeA.host.connect(addrInfoC)
-	}
-	require.NoError(t, err)
+	nodeA.host.h.Peerstore().AddAddrs(addrInfoC.ID, addrInfoC.Addrs, peerstore.PermanentAddrTTL)
+	nodeA.host.cm.peerSetHandler.AddToPeerSet(0, addrInfoC.ID)
+	time.Sleep(time.Millisecond * 200)
 
 	nodeA.syncQueue.stop()
 	nodeA.syncQueue.ctx, nodeA.syncQueue.cancel = context.WithCancel(context.Background())
 	defer nodeA.syncQueue.cancel()
 	time.Sleep(time.Second * 3)
 
-	nodeA.syncQueue.updatePeerScore(nodeB.host.id(), 1) // expect to try to sync with nodeB first
+	// TODO: update peer reputation
 	go nodeA.syncQueue.processBlockRequests()
 	nodeA.syncQueue.requestCh <- &syncRequest{
 		req: testBlockRequestMessage,

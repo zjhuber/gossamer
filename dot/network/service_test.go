@@ -337,12 +337,7 @@ func TestHandleConn(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	bScore, ok := nodeA.syncQueue.peerScore.Load(nodeB.host.id())
-	require.True(t, ok)
-	require.Equal(t, 1, bScore)
-	aScore, ok := nodeB.syncQueue.peerScore.Load(nodeA.host.id())
-	require.True(t, ok)
-	require.Equal(t, 1, aScore)
+	// TODO: load peer reputation from peerSet
 }
 
 func TestSerivceIsMajorSyncMetrics(t *testing.T) {

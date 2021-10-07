@@ -213,11 +213,6 @@ func (s *Service) Start() error {
 		s.ctx, s.cancel = context.WithCancel(context.Background())
 	}
 
-	connMgr := s.host.h.ConnManager().(*ConnManager)
-	connMgr.registerDisconnectHandler(func(p peer.ID) {
-		s.syncQueue.peerScore.Delete(p)
-	})
-
 	s.host.registerStreamHandler(s.host.protocolID+syncID, s.handleSyncStream)
 	s.host.registerStreamHandler(s.host.protocolID+lightID, s.handleLightStream)
 
@@ -257,7 +252,6 @@ func (s *Service) Start() error {
 	// since this opens block announce streams, it should happen after the protocol is registered
 	s.host.h.Network().SetConnHandler(s.handleConn)
 
-	go s.processMessageQueue()
 	// log listening addresses to console
 	for _, addr := range s.host.multiaddrs() {
 		logger.Info("Started listening", "address", addr)
@@ -281,7 +275,7 @@ func (s *Service) Start() error {
 	}
 
 	time.Sleep(time.Millisecond * 500)
-
+	go s.startPeerSetHandler()
 	logger.Info("started network service", "supported protocols", s.host.protocols())
 	s.syncQueue.start()
 
@@ -389,19 +383,9 @@ func (s *Service) sentBlockIntervalTelemetry() {
 
 func (s *Service) handleConn(conn libp2pnetwork.Conn) {
 	// TODO: setID currently is 0 change when we have multiple set.
-	if conn.Stat().Direction.String() == "Inbound" {
-		m, err := s.host.cm.peerSetHandler.Incoming(0, conn.RemotePeer(), 0)
-		if err != nil {
-			logger.Error("failed to handle incoming connection request from", "peerID", conn.RemotePeer())
-		}
-
-		if m.GetStatus() == peerset.Reject {
-			_ = conn.Close()
-		}
+	if conn.Stat().Direction == libp2pnetwork.DirInbound {
+		s.host.cm.peerSetHandler.Incoming(0, conn.RemotePeer())
 	}
-
-	// TODO: remove the old peer scoring.
-	s.syncQueue.updatePeerScore(conn.RemotePeer(), 1)
 }
 
 // Stop closes running instances of the host and network services as well as
@@ -770,27 +754,52 @@ func (s *Service) ReportPeer(p peer.ID, change peerset.ReputationChange) {
 	s.host.cm.peerSetHandler.ReportPeer(p, change)
 }
 
-func (s *Service) processMessageQueue() {
-	ticker := time.NewTicker(time.Millisecond * 200)
-	for range ticker.C {
-		mq := s.host.cm.peerSetHandler.GetMessageQueue()
-		for _, m := range mq {
-			peerID := m.GetPeerID()
-			switch m.GetStatus() {
-			case peerset.Connect:
-				err := s.host.connect(s.host.h.Peerstore().PeerInfo(peerID))
+func (s *Service) startPeerSetHandler() {
+	go s.host.cm.peerSetHandler.Start()
+	go s.processMessage()
+}
+
+func (s *Service) processMessage() {
+	msgCh := s.host.cm.peerSetHandler.GetMessageChan()
+	for m := range msgCh {
+		msg, ok := m.(peerset.Message)
+		if !ok {
+			logger.Error("failed to get message from peerset")
+		}
+
+		peerID := msg.GetPeerID()
+		switch msg.GetStatus() {
+		case peerset.Connect:
+			addrInfo := s.host.h.Peerstore().PeerInfo(peerID)
+			if addrInfo.Addrs == nil || len(addrInfo.Addrs) == 0 {
+				var err error
+				addrInfo, err = s.host.discovery.findPeer(peerID)
 				if err != nil {
-					logger.Error("failed to open connection with ", "peer", peerID, "error", err)
+					logger.Error("failed to find peer ", "peer", peerID, "error", err)
 					continue
 				}
-				logger.Info("Connected to ", "peer", peerID)
-			case peerset.Drop:
-				err := s.host.closePeer(peerID)
+			}
+
+			err := s.host.connect(addrInfo)
+			if err != nil {
+				logger.Error("failed to open connection with ", "peer", peerID, "error", err)
+				continue
+			}
+			logger.Info("Connected to ", "peer", peerID)
+		case peerset.Drop:
+			err := s.host.closePeer(peerID)
+			if err != nil {
+				logger.Error("failed to close connection for ", "peer", peerID, "error", err)
+				continue
+			}
+			logger.Info("Connection dropped successfully ", "peer", peerID)
+		case peerset.Reject:
+			conns := s.host.h.Network().ConnsToPeer(peerID)
+			for _, c := range conns {
+				err := c.Close()
 				if err != nil {
-					logger.Error("failed to close connection for ", "peer", peerID, "error", err)
-					continue
+					logger.Error("Failed to close connection ", "peer", peerID)
 				}
-				logger.Info("Connection dropped successfully ", "peer", peerID)
 			}
 		}
 	}

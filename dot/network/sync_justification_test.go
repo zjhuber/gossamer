@@ -122,7 +122,5 @@ func TestSyncQueue_processBlockResponses_Justification(t *testing.T) {
 	_, has := q.justificationRequestData.Load(common.Hash{byte(0)})
 	require.False(t, has)
 
-	score, ok := q.peerScore.Load(peerID)
-	require.True(t, ok)
-	require.Equal(t, 2, score)
+	// TODO: load peer reputation from peerSet.
 }
